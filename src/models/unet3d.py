@@ -41,18 +41,23 @@ class DownBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.residual = ResidualBlock3D(out_channels)
 
-        # Downsample along z-axis only or all axes
+        # Downsample using strided convolution for MPS compatibility
+        # MPS doesn't support 3D pooling operations yet
         if downsample_z:
-            self.pool = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+            self.downsample = nn.Conv3d(
+                out_channels, out_channels,
+                kernel_size=3, stride=2, padding=1
+            )
         else:
-            self.pool = None
+            self.downsample = None
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = self.relu(self.bn(self.conv(x)))
         x = self.residual(x)
+        # Skip connection AFTER residual
         skip = x
-        if self.pool is not None:
-            x = self.pool(x)
+        if self.downsample is not None:
+            x = self.downsample(x)
         return x, skip
 
 
@@ -86,10 +91,13 @@ class UpBlock(nn.Module):
     def forward(self, x: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
         x = self.up(x)
 
-        # Handle size mismatch from pooling
-        if x.shape != skip.shape:
+        # Handle spatial size mismatch
+        # When using z-only upsampling, we need to match both z and x,y dimensions to skip
+        if x.shape[2:] != skip.shape[2:]:
+            # Interpolate to match skip connection's spatial dimensions
             x = F.interpolate(x, size=skip.shape[2:], mode='trilinear', align_corners=False)
 
+        # Concatenate along channel dimension
         x = torch.cat([x, skip], dim=1)
         x = self.relu(self.bn(self.conv(x)))
         x = self.residual(x)
@@ -229,7 +237,7 @@ def create_model(
         base_channels=base_channels,
         depth=depth,
         upscale_factor=upscale_factor,
-        z_only_upsample=True
+        z_only_upsample=False  # Use standard 3D upsampling for CPU compatibility
     )
 
     model = model.to(device)

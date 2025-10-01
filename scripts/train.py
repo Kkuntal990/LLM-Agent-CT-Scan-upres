@@ -5,7 +5,7 @@ import argparse
 import torch
 from pathlib import Path
 
-from src.models.unet3d import create_model
+from src.models.unet3d_simple import create_simple_model
 from src.train.dataset import create_dataloaders
 from src.train.trainer import SupervisedTrainer
 from src.data.prepare_lidc import load_split
@@ -75,10 +75,7 @@ def main():
 
     # Create model
     print("\nCreating model...")
-    model = create_model(
-        upscale_factor=args.upscale_factor,
-        device=args.device
-    )
+    model = create_simple_model(device=args.device)
 
     # Create trainer
     trainer = SupervisedTrainer(
