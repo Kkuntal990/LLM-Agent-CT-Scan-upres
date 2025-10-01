@@ -50,7 +50,7 @@ class SupervisedTrainer:
 
         # Learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode='min', factor=0.5, patience=5, verbose=True
+            self.optimizer, mode='min', factor=0.5, patience=5
         )
 
         # Checkpointing and logging
