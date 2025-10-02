@@ -1,0 +1,3 @@
+LIDC-IDRI-0007.nii.gz
+LIDC-IDRI-0012.nii.gz
+LIDC-IDRI-0009.nii.gz
