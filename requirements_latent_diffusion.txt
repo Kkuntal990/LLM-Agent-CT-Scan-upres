@@ -1,0 +1,27 @@
+# Requirements for SOTA 3D Latent Diffusion Implementation
+# Install with: pip install -r requirements_latent_diffusion.txt
+
+# Core ML frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.24.0
+
+# Medical imaging
+nibabel>=5.0.0
+pydicom>=2.3.0
+
+# Training utilities
+tensorboard>=2.12.0
+tqdm>=4.65.0
+
+# Hugging Face (for pre-trained VAE)
+huggingface-hub>=0.16.0
+safetensors>=0.3.0
+
+# Data processing
+scipy>=1.10.0
+scikit-image>=0.20.0
+
+# Optional but recommended
+# einops>=0.6.0  # For advanced tensor operations
+# wandb>=0.15.0  # For experiment tracking (alternative to TensorBoard)
