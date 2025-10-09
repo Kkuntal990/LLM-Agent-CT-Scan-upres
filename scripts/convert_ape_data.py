@@ -174,6 +174,13 @@ def process_zip_file(zip_path: Path, output_dir: Path, skip_existing: bool = Fal
     patient_name = zip_path.stem  # e.g., "201612140637 RONG GUI FANG"
     safe_name = patient_name.replace(" ", "_")
 
+    # Check if already converted (look for any file with this patient name)
+    if skip_existing:
+        existing_files = list(output_dir.glob(f"{safe_name}*.nii.gz"))
+        if existing_files:
+            # Already converted, skip extraction entirely
+            return len(existing_files)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
@@ -195,11 +202,6 @@ def process_zip_file(zip_path: Path, output_dir: Path, skip_existing: bool = Fal
                 output_path = output_dir / f"{safe_name}_series{series_idx:02d}.nii.gz"
             else:
                 output_path = output_dir / f"{safe_name}.nii.gz"
-
-            # Skip if already exists
-            if skip_existing and output_path.exists():
-                num_converted += 1
-                continue
 
             # Convert to NIfTI
             success = convert_dicom_series_to_nifti(dcm_files, output_path)
@@ -224,15 +226,16 @@ def create_train_val_test_splits(nifti_files: list, train_ratio: float, val_rati
     val_files = nifti_files[n_train:n_train+n_val]
     test_files = nifti_files[n_train+n_val:]
 
-    # Save file lists
+    # Save file lists with only filenames (not full paths)
+    # The dataset loader will prepend the data_dir
     with open(output_dir / "train_files.txt", "w") as f:
-        f.write("\n".join([str(p) for p in train_files]))
+        f.write("\n".join([p.name for p in train_files]))
 
     with open(output_dir / "val_files.txt", "w") as f:
-        f.write("\n".join([str(p) for p in val_files]))
+        f.write("\n".join([p.name for p in val_files]))
 
     with open(output_dir / "test_files.txt", "w") as f:
-        f.write("\n".join([str(p) for p in test_files]))
+        f.write("\n".join([p.name for p in test_files]))
 
     print(f"\nDataset splits:")
     print(f"  Train: {len(train_files)} files")

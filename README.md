@@ -424,6 +424,95 @@ pip install -e .
 
 ---
 
+## Data Management
+
+### Directory Structure
+
+This repository uses the following directory structure. **All data directories are gitignored** to keep the repository clean:
+
+```
+.
+├── data/                      # ⚠️ GITIGNORED - All datasets
+│   ├── ape-raw/              # Downloaded ZIP files from HuggingFace
+│   ├── ape-nifti/            # Converted NIfTI files from APE-data
+│   ├── ape-latents/          # Pre-computed latent representations
+│   ├── lidc-processed/       # Converted LIDC-IDRI NIfTI files
+│   └── lidc-latents/         # Pre-computed LIDC latents
+│
+├── checkpoints/               # ⚠️ GITIGNORED - All trained models
+│   ├── vae_ape/              # Fine-tuned VAE weights
+│   ├── latent_diffusion_ape/ # Trained diffusion models
+│   └── best_model.pth        # Baseline model weights
+│
+├── pretrained_weights/        # ⚠️ GITIGNORED - Downloaded pretrained models
+│   └── microsoft-mri-vae/    # Microsoft MRI VAE
+│
+├── runs/                      # ⚠️ GITIGNORED - TensorBoard logs
+│
+└── *.log                      # ⚠️ GITIGNORED - Training logs
+```
+
+### What's Tracked in Git
+
+✅ **Tracked** (in version control):
+- Source code (`src/`)
+- Scripts (`scripts/`)
+- Documentation (`.md` files)
+- Configuration files (`requirements.txt`, `.gitignore`)
+- Environment files (`environment.yml`)
+
+❌ **Not Tracked** (gitignored):
+- Training data (`data/`)
+- Model checkpoints (`checkpoints/`, `*.pth`, `*.pt`)
+- Pretrained weights (`pretrained_weights/`)
+- Logs and caches (`runs/`, `*.log`, `__pycache__/`)
+- IDE files (`.vscode/`, `.idea/`)
+
+### Storage Requirements
+
+| Component | Size | Location |
+|-----------|------|----------|
+| **Source Code** | ~2 MB | Git repository |
+| **APE-data (raw)** | ~5-10 GB | `data/ape-raw/` |
+| **APE-data (NIfTI)** | ~3-5 GB | `data/ape-nifti/` |
+| **Pretrained VAE** | ~500 MB | `pretrained_weights/` |
+| **VAE checkpoints** | ~500 MB | `checkpoints/vae_ape/` |
+| **Diffusion checkpoints** | ~1-2 GB | `checkpoints/latent_diffusion_ape/` |
+| **Latent cache** | ~1-2 GB | `data/ape-latents/` |
+| **Total (with data)** | ~15-25 GB | Local disk |
+
+### Best Practices
+
+1. **Don't commit data or checkpoints**
+   ```bash
+   # Check what will be committed
+   git status
+
+   # If you see data/ or checkpoints/, they're already gitignored
+   ```
+
+2. **Share trained models separately**
+   - Upload checkpoints to Hugging Face Hub
+   - Use cloud storage (Google Drive, Dropbox)
+   - Share via institutional storage
+
+3. **Clean up old checkpoints**
+   ```bash
+   # Remove old checkpoints to save space
+   rm -rf checkpoints/old_experiment_*
+
+   # Keep only best models
+   ls -lh checkpoints/*/best_*.pth
+   ```
+
+4. **Backup important checkpoints**
+   ```bash
+   # Compress checkpoints for archival
+   tar -czf checkpoints_backup.tar.gz checkpoints/
+   ```
+
+---
+
 ## Development History
 
 ### Major Milestones

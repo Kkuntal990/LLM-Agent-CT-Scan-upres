@@ -1,17 +1,74 @@
 # Quick Start Guide: APE-data Training
 
-This guide shows you how to train both approaches on the APE-data dataset you've downloaded from Hugging Face.
+This guide shows you how to train both approaches on the APE-data dataset from Hugging Face.
 
 ---
 
-## Prerequisites
+## 🚀 Quick Setup (One Command)
 
-1. **APE-data downloaded** to Hugging Face cache:
-   ```
-   ~/.cache/huggingface/hub/datasets--t2ance--APE-data/snapshots/<hash>/
+**Easiest way to get started:**
+
+```bash
+# One-command setup: Download, convert, and prepare for training
+./scripts/setup_ape_data.sh
+
+# Or for testing with just 10 samples:
+./scripts/setup_ape_data.sh --max-samples 10
+```
+
+This will:
+1. Check HuggingFace authentication
+2. Download APE-data (if not cached)
+3. Convert to NIfTI format
+4. Create train/val/test splits
+
+**Then start training:**
+```bash
+./run_custom_training.sh
+```
+
+---
+
+## Manual Setup (If You Prefer Step-by-Step)
+
+### Prerequisites
+
+#### Option A: Download APE-data from HuggingFace
+
+**First time setup:**
+
+1. **Authenticate with HuggingFace:**
+   ```bash
+   # Login (one-time only)
+   huggingface-cli login
+
+   # Or check if already logged in
+   huggingface-cli whoami
    ```
 
-2. **Find your exact path:**
+2. **Request access to dataset:**
+   - Visit: https://huggingface.co/datasets/t2ance/APE-data
+   - Click "Request access to this repo"
+   - Wait for approval
+
+3. **Download the dataset:**
+   ```bash
+   python scripts/download_ape_data.py \
+       --output-dir ./data/ape-raw \
+       --subset APE
+   ```
+
+   **What this does:**
+   - Downloads all ZIP files from HuggingFace
+   - Saves to `./data/ape-raw/APE/`
+   - ~206 ZIP files, several GB
+   - Time: 30-60 minutes (depends on connection)
+
+#### Option B: Use Cached HuggingFace Data (If Already Downloaded)
+
+If you've already downloaded APE-data via HuggingFace:
+
+1. **Find your cache path:**
    ```bash
    find ~/.cache/huggingface -name "*APE-data*" -type d
    ```
@@ -21,9 +78,15 @@ This guide shows you how to train both approaches on the APE-data dataset you've
    /Users/kuntalkokate/.cache/huggingface/hub/datasets--t2ance--APE-data/snapshots/5d20b5abd8504294335446f836fd0c61bf6f2d6a
    ```
 
-3. **Set environment variable** (for convenience):
+2. **Set environment variable:**
    ```bash
    export APE_CACHE_DIR="<your-path-from-above>"
+   ```
+
+3. **Or edit `run_custom_training.sh`:**
+   ```bash
+   # In run_custom_training.sh, set:
+   USE_HF_CACHE=true
    ```
 
 ---

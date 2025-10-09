@@ -26,13 +26,16 @@ wheels/
 checkpoints/
 runs/
 
-# Data
-data/LIDC-IDRI/
-data/processed/
-data/raw/
+# Data - All dataset directories
+data/
+!data/.gitkeep
 *.nii
 *.nii.gz
 *.dcm
+*.zip
+
+# Pretrained weights
+pretrained_weights/
 
 # IDE
 .vscode/

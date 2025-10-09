@@ -54,8 +54,9 @@ def parse_args():
                         choices=["linear", "cosine", "constant"])
     parser.add_argument("--warmup-steps", type=int, default=500)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=4)
-    parser.add_argument("--mixed-precision", type=str, default="fp16",
-                        choices=["no", "fp16", "bf16"])
+    parser.add_argument("--mixed-precision", type=str, default="no",
+                        choices=["no", "fp16", "bf16"],
+                        help="Mixed precision training (fp16/bf16 only work on CUDA)")
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
 
     # Diffusion arguments
@@ -83,20 +84,21 @@ def create_unet_3d(
     in_channels: int = 8,  # 4 (noisy latent) + 4 (LR conditioning)
     out_channels: int = 4,
     base_channels: int = 128,
-    block_out_channels: tuple = (128, 256, 512, 512),
+    block_out_channels: tuple = (128, 256, 384, 512),
     down_block_types: tuple = (
+        "CrossAttnDownBlock3D",
+        "CrossAttnDownBlock3D",
+        "CrossAttnDownBlock3D",
         "DownBlock3D",
-        "DownBlock3D",
-        "AttnDownBlock3D",
-        "AttnDownBlock3D",
     ),
     up_block_types: tuple = (
-        "AttnUpBlock3D",
-        "AttnUpBlock3D",
         "UpBlock3D",
-        "UpBlock3D",
+        "CrossAttnUpBlock3D",
+        "CrossAttnUpBlock3D",
+        "CrossAttnUpBlock3D",
     ),
     layers_per_block: int = 2,
+    cross_attention_dim: int = 64,
 ):
     """Create 3D UNet for latent diffusion."""
     return UNet3DConditionModel(
@@ -106,6 +108,7 @@ def create_unet_3d(
         down_block_types=down_block_types,
         up_block_types=up_block_types,
         layers_per_block=layers_per_block,
+        cross_attention_dim=cross_attention_dim,
     )
 
 
@@ -132,10 +135,34 @@ def train_one_epoch(
 
     for step, (lr_volumes, hr_volumes) in enumerate(dataloader):
         with accelerator.accumulate(model):
-            # Encode to latent space
+            # Encode to latent space (slice-by-slice for 2D VAE)
             with torch.no_grad():
-                lr_latents = vae.encode(lr_volumes).latent_dist.sample()
-                hr_latents = vae.encode(hr_volumes).latent_dist.sample()
+                # VAE is 2D, so we need to process each slice
+                batch_size = lr_volumes.shape[0]
+                channels = lr_volumes.shape[1]
+                lr_depth = lr_volumes.shape[2]
+                hr_depth = hr_volumes.shape[2]
+                height = lr_volumes.shape[3]
+                width = lr_volumes.shape[4]
+
+                # Process LR volumes
+                lr_2d = lr_volumes.permute(0, 2, 1, 3, 4).reshape(batch_size * lr_depth, channels, height, width)
+                lr_latent_2d = vae.encode(lr_2d).latent_dist.sample()
+
+                # Process HR volumes
+                hr_2d = hr_volumes.permute(0, 2, 1, 3, 4).reshape(batch_size * hr_depth, channels, height, width)
+                hr_latent_2d = vae.encode(hr_2d).latent_dist.sample()
+
+                # Reshape back to 3D: (batch, latent_channels, depth, latent_h, latent_w)
+                latent_channels = lr_latent_2d.shape[1]
+                latent_h = lr_latent_2d.shape[2]
+                latent_w = lr_latent_2d.shape[3]
+
+                lr_latents = lr_latent_2d.reshape(batch_size, lr_depth, latent_channels, latent_h, latent_w)
+                lr_latents = lr_latents.permute(0, 2, 1, 3, 4)  # (batch, latent_channels, lr_depth, latent_h, latent_w)
+
+                hr_latents = hr_latent_2d.reshape(batch_size, hr_depth, latent_channels, latent_h, latent_w)
+                hr_latents = hr_latents.permute(0, 2, 1, 3, 4)  # (batch, latent_channels, hr_depth, latent_h, latent_w)
 
                 # Scale latents (VAE uses 0.18215 scaling factor)
                 lr_latents = lr_latents * 0.18215
@@ -157,8 +184,21 @@ def train_one_epoch(
             # Concatenate noisy latents with LR conditioning
             model_input = torch.cat([noisy_latents, lr_latents], dim=1)
 
+            # Create dummy encoder_hidden_states for cross attention
+            # Shape: (batch, seq_len, cross_attention_dim)
+            encoder_hidden_states = torch.zeros(
+                batch_size, 1, 64,
+                device=model_input.device,
+                dtype=model_input.dtype
+            )
+
             # Predict noise (or v-prediction/sample depending on config)
-            model_pred = model(model_input, timesteps, return_dict=False)[0]
+            model_pred = model(
+                model_input,
+                timesteps,
+                encoder_hidden_states=encoder_hidden_states,
+                return_dict=False
+            )[0]
 
             # Calculate loss based on prediction type
             if noise_scheduler.config.prediction_type == "epsilon":
