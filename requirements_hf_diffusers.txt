@@ -1,0 +1,28 @@
+# Hugging Face Diffusers Approach Requirements
+
+# Core dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Hugging Face ecosystem
+diffusers>=0.25.0
+transformers>=4.35.0
+accelerate>=0.25.0
+
+# Medical imaging
+nibabel>=5.1.0
+pydicom>=2.4.0
+SimpleITK>=2.3.0
+
+# Scientific computing
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Progress and utilities
+tqdm>=4.66.0
+
+# Optional: Weights & Biases logging
+# wandb>=0.15.0
+
+# Optional: TensorBoard logging
+# tensorboard>=2.14.0

@@ -4,13 +4,24 @@ Learning-based pipeline for upsampling low through-plane resolution CT volumes t
 
 ---
 
-## 🚀 **NEW: SOTA 3D Latent Diffusion Model** (Recommended)
+## 🚀 **NEW: Two SOTA Approaches Available**
 
-We now provide a state-of-the-art implementation using **3D Latent Diffusion** with:
-- **Medical VAE** (adapted from microsoft/mri-autoencoder-v0.1)
-- **ResShift** (NeurIPS 2023, TPAMI 2024) for efficient 15-step sampling
-- **IRControlNet** (ECCV 2024 DiffBIR) for advanced LR conditioning
-- **Full 3D processing** for superior volumetric coherence
+We provide **TWO** implementations - choose based on your needs:
+
+### Approach 1: **Hugging Face Diffusers** (~500 lines) - Easy & Fast
+- ✅ Minimal code, production-ready
+- ✅ Multi-GPU with `accelerate`
+- ✅ Direct APE-data loading (no preprocessing)
+- 📊 Expected: **38-40 dB PSNR**
+
+### Approach 2: **Custom Implementation** (~2,636 lines) - Maximum Performance
+- ✅ **Medical VAE** (adapted from microsoft/mri-autoencoder-v0.1)
+- ✅ **ResShift** (NeurIPS 2023, TPAMI 2024) for efficient 15-step sampling
+- ✅ **IRControlNet** (ECCV 2024 DiffBIR) for advanced LR conditioning
+- ✅ **Full 3D processing** for superior volumetric coherence
+- 📊 Expected: **40-43 dB PSNR**
+
+**📖 See [APPROACH_COMPARISON.md](APPROACH_COMPARISON.md) for detailed comparison**
 
 ### Performance Comparison
 
@@ -171,7 +182,31 @@ python demo.py \
 
 ---
 
-## Dataset: LIDC-IDRI
+## Datasets
+
+### APE-data (Hugging Face) - **NEW** ✨
+
+A private dataset with CT scans in ZIP/DICOM format.
+
+**Location:** `~/.cache/huggingface/hub/datasets--t2ance--APE-data/`
+
+**Quick Start with APE-data:**
+
+```bash
+# Option 1: HF Diffusers (direct loading, no preprocessing)
+python scripts/finetune_diffusion_hf.py \
+    --ape-cache-dir ~/.cache/huggingface/hub/datasets--t2ance--APE-data/snapshots/<hash> \
+    --subset APE \
+    --device cuda
+
+# Option 2: Custom Implementation (convert to NIfTI first)
+python scripts/convert_ape_data.py \
+    --ape-cache-dir ~/.cache/huggingface/hub/datasets--t2ance--APE-data/snapshots/<hash> \
+    --subset APE \
+    --output-dir ./data/ape-nifti
+```
+
+### LIDC-IDRI (Public)
 
 The Lung Image Database Consortium (LIDC-IDRI) contains 1,018 thoracic CT cases.
 

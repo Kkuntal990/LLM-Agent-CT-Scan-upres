@@ -1,9 +1,8 @@
-"""Data preparation utilities for LIDC-IDRI."""
+"""Data preparation utilities for LIDC-IDRI and APE-data."""
 
-from .prepare_lidc import convert_dicom_to_nifti, create_manifest, split_dataset
+# Import functions only when explicitly requested to avoid import errors
+# from .prepare_lidc import convert_dicom_to_nifti, create_manifest, split_dataset
 
 __all__ = [
-    'convert_dicom_to_nifti',
-    'create_manifest',
-    'split_dataset'
+    'ape_dataset_hf',
 ]
