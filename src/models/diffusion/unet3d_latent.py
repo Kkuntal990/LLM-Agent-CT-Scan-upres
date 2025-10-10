@@ -139,12 +139,15 @@ class LatentDiffusionUNet3D(nn.Module):
             out_ch = model_channels * channel_mult[level]
 
             for i in range(num_res_blocks + 1):
-                # Get skip connection channel count
-                skip_ch = skip_ch_list[skip_idx] if skip_idx < len(skip_ch_list) else 0
-                skip_idx += 1
+                # Get skip connection channel count (0 if no skip available)
+                if skip_idx < len(skip_ch_list):
+                    skip_ch = skip_ch_list[skip_idx]
+                    skip_idx += 1
+                else:
+                    skip_ch = 0  # No skip for last block
 
                 # Input = current channels + skip channels
-                in_ch = ch + skip_ch
+                in_ch = ch + skip_ch if skip_ch > 0 else ch
 
                 self.decoder_blocks.append(
                     ResNetBlock3D(
@@ -224,14 +227,15 @@ class LatentDiffusionUNet3D(nn.Module):
 
         for level in reversed(range(len(self.channel_mult))):
             for i in range(self.num_res_blocks + 1):
-                # Concatenate skip connection
-                skip = skip_connections.pop()
+                # Concatenate skip connection if available
+                if len(skip_connections) > 0:
+                    skip = skip_connections.pop()
 
-                # Match spatial dimensions if needed (due to anisotropic operations)
-                if h.shape[2:] != skip.shape[2:]:
-                    h = F.interpolate(h, size=skip.shape[2:], mode='trilinear', align_corners=False)
+                    # Match spatial dimensions if needed (due to anisotropic operations)
+                    if h.shape[2:] != skip.shape[2:]:
+                        h = F.interpolate(h, size=skip.shape[2:], mode='trilinear', align_corners=False)
 
-                h = torch.cat([h, skip], dim=1)
+                    h = torch.cat([h, skip], dim=1)
 
                 h = self.decoder_blocks[dec_block_idx](h, t_emb)
                 dec_block_idx += 1
