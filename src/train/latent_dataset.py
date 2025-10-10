@@ -88,6 +88,24 @@ class LatentDataset(Dataset):
         c, d_hr, h, w = hr_latent.shape
         patch_d, patch_h, patch_w = self.patch_size
 
+        # If volume is smaller than patch size, pad it
+        if d_hr < patch_d or h < patch_h or w < patch_w:
+            pad_d = max(0, patch_d - d_hr)
+            pad_h = max(0, patch_h - h)
+            pad_w = max(0, patch_w - w)
+
+            hr_latent = np.pad(
+                hr_latent,
+                ((0, 0), (0, pad_d), (0, pad_h), (0, pad_w)),
+                mode='reflect'
+            )
+            lr_latent = np.pad(
+                lr_latent,
+                ((0, 0), (0, pad_d), (0, pad_h), (0, pad_w)),
+                mode='reflect'
+            )
+            d_hr, h, w = hr_latent.shape[1], hr_latent.shape[2], hr_latent.shape[3]
+
         # Random starting position
         d_start = np.random.randint(0, max(1, d_hr - patch_d + 1))
         h_start = np.random.randint(0, max(1, h - patch_h + 1))
