@@ -330,18 +330,44 @@ def prepare_latent_dataset(
         # Upsample LR to HR size
         lr_upsampled = _upsample_volume(lr_volume, hr_volume.shape)
 
-        # Convert to tensors
-        hr_tensor = torch.from_numpy(hr_volume).unsqueeze(0).unsqueeze(0).to(device)
-        lr_tensor = torch.from_numpy(lr_upsampled).unsqueeze(0).unsqueeze(0).to(device)
+        # Process in chunks to avoid OOM
+        chunk_size = 32  # Process 32 slices at a time
+        depth = hr_volume.shape[0]
 
-        # Encode to latents
+        hr_latent_chunks = []
+        lr_latent_chunks = []
+
         with torch.no_grad():
-            hr_latent = vae_model.encode_to_latent(hr_tensor, sample=False)
-            lr_latent = vae_model.encode_to_latent(lr_tensor, sample=False)
+            for start_idx in range(0, depth, chunk_size):
+                end_idx = min(start_idx + chunk_size, depth)
+
+                # Extract chunk
+                hr_chunk = hr_volume[start_idx:end_idx]
+                lr_chunk = lr_upsampled[start_idx:end_idx]
+
+                # Convert to tensors
+                hr_tensor = torch.from_numpy(hr_chunk).unsqueeze(0).unsqueeze(0).to(device)
+                lr_tensor = torch.from_numpy(lr_chunk).unsqueeze(0).unsqueeze(0).to(device)
+
+                # Encode chunk
+                hr_latent_chunk = vae_model.encode_to_latent(hr_tensor, sample=False)
+                lr_latent_chunk = vae_model.encode_to_latent(lr_tensor, sample=False)
+
+                # Move to CPU and store
+                hr_latent_chunks.append(hr_latent_chunk.squeeze(0).cpu())
+                lr_latent_chunks.append(lr_latent_chunk.squeeze(0).cpu())
+
+                # Clear GPU memory
+                del hr_tensor, lr_tensor, hr_latent_chunk, lr_latent_chunk
+                torch.cuda.empty_cache()
+
+        # Concatenate chunks along depth dimension
+        hr_latent = torch.cat(hr_latent_chunks, dim=1)  # Concatenate along D dimension (C, D, H, W)
+        lr_latent = torch.cat(lr_latent_chunks, dim=1)
 
         # Save as .npz
-        hr_latent_np = hr_latent.squeeze(0).cpu().numpy()
-        lr_latent_np = lr_latent.squeeze(0).cpu().numpy()
+        hr_latent_np = hr_latent.numpy()
+        lr_latent_np = lr_latent.numpy()
 
         base_name = Path(filename).stem
         output_file = output_path / f"{base_name}_latent.npz"
