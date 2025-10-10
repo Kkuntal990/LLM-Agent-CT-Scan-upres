@@ -226,6 +226,11 @@ class LatentDiffusionUNet3D(nn.Module):
             for i in range(self.num_res_blocks + 1):
                 # Concatenate skip connection
                 skip = skip_connections.pop()
+
+                # Match spatial dimensions if needed (due to anisotropic operations)
+                if h.shape[2:] != skip.shape[2:]:
+                    h = F.interpolate(h, size=skip.shape[2:], mode='trilinear', align_corners=False)
+
                 h = torch.cat([h, skip], dim=1)
 
                 h = self.decoder_blocks[dec_block_idx](h, t_emb)
