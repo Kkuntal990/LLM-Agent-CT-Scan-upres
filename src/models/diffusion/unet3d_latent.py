@@ -126,8 +126,9 @@ class LatentDiffusionUNet3D(nn.Module):
             out_ch = model_channels * channel_mult[level]
 
             for i in range(num_res_blocks + 1):
-                # First block receives skip connection (double channels)
-                in_ch = ch + out_ch if i == 0 else ch
+                # All blocks receive skip connection (concatenated in forward pass)
+                # So input channels = current channels + skip channels
+                in_ch = ch + out_ch
 
                 self.decoder_blocks.append(
                     ResNetBlock3D(
