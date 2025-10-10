@@ -54,7 +54,10 @@ class LatentDataset(Dataset):
                 - 'lr_latent': LR latent patch, shape (C, D, H, W)
         """
         # Load latent file
-        latent_file = self.latent_dir / f"{self.file_list[idx]}_latent.npz"
+        # Handle both .nii.gz and .nii extensions (Path.stem only removes last extension)
+        filename = self.file_list[idx]
+        base_name = Path(filename).stem  # Removes .gz, leaving .nii for .nii.gz files
+        latent_file = self.latent_dir / f"{base_name}_latent.npz"
         data = np.load(latent_file)
 
         hr_latent = data['hr_latent'].astype(np.float32)
