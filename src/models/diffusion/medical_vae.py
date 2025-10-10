@@ -269,8 +269,26 @@ def vae_loss(
         total_loss: Combined loss
         loss_dict: Dictionary of individual losses
     """
+    # Handle potential size mismatch from VAE encoder-decoder
+    if reconstruction.shape != target.shape:
+        # Interpolate reconstruction to match target size
+        reconstruction = F.interpolate(
+            reconstruction,
+            size=target.shape[2:],
+            mode='trilinear',
+            align_corners=False
+        )
+
     # Reconstruction loss (MSE)
     if mask is not None:
+        # Also resize mask if needed
+        if mask.shape != target.shape:
+            mask = F.interpolate(
+                mask.float(),
+                size=target.shape[2:],
+                mode='trilinear',
+                align_corners=False
+            )
         recon_loss = ((reconstruction - target) ** 2 * mask).sum() / (mask.sum() + 1e-8)
     else:
         recon_loss = F.mse_loss(reconstruction, target)

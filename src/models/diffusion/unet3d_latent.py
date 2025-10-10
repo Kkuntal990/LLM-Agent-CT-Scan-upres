@@ -114,9 +114,9 @@ class LatentDiffusionUNet3D(nn.Module):
                 )
 
         # Bottleneck (middle blocks)
-        self.mid_block1 = ResNetBlock3D(ch, ch, time_embed_dim, 0.0)
+        self.mid_block1 = ResNetBlock3D(ch, ch, time_embed_dim, groups=8, dropout=0.0)
         self.mid_attn = SelfAttention3D(ch, num_heads=num_heads) if use_3d_attention else nn.Identity()
-        self.mid_block2 = ResNetBlock3D(ch, ch, time_embed_dim, 0.0)
+        self.mid_block2 = ResNetBlock3D(ch, ch, time_embed_dim, groups=8, dropout=0.0)
 
         # Decoder blocks
         self.decoder_blocks = nn.ModuleList()
