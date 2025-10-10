@@ -122,13 +122,29 @@ class LatentDiffusionUNet3D(nn.Module):
         self.decoder_blocks = nn.ModuleList()
         self.upsample_blocks = nn.ModuleList()
 
+        # Track skip connection channels (reverse order)
+        skip_ch_list = []
+        temp_ch = model_channels
+        for level, mult in enumerate(channel_mult):
+            out_ch_enc = model_channels * mult
+            for _ in range(num_res_blocks):
+                temp_ch = out_ch_enc
+                skip_ch_list.append(temp_ch)
+            if level < len(channel_mult) - 1:
+                skip_ch_list.append(temp_ch)  # Downsample skip
+        skip_ch_list = list(reversed(skip_ch_list))
+
+        skip_idx = 0
         for level in reversed(range(len(channel_mult))):
             out_ch = model_channels * channel_mult[level]
 
             for i in range(num_res_blocks + 1):
-                # All blocks receive skip connection (concatenated in forward pass)
-                # So input channels = current channels + skip channels
-                in_ch = ch + out_ch
+                # Get skip connection channel count
+                skip_ch = skip_ch_list[skip_idx] if skip_idx < len(skip_ch_list) else 0
+                skip_idx += 1
+
+                # Input = current channels + skip channels
+                in_ch = ch + skip_ch
 
                 self.decoder_blocks.append(
                     ResNetBlock3D(
