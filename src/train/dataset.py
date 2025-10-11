@@ -106,6 +106,27 @@ class LIDCDataset(Dataset):
         d_lr = lr_volume.shape[0]
         patch_d, patch_h, patch_w = self.patch_size
 
+        # Pad volumes if smaller than patch size
+        if d_hr < patch_d or h < patch_h or w < patch_w:
+            pad_d = max(0, patch_d - d_hr)
+            pad_h = max(0, patch_h - h)
+            pad_w = max(0, patch_w - w)
+
+            hr_volume = np.pad(
+                hr_volume,
+                ((0, pad_d), (0, pad_h), (0, pad_w)),
+                mode='reflect'
+            )
+
+            lr_pad_d = max(0, (patch_d // self.downsample_factor) - d_lr)
+            lr_volume = np.pad(
+                lr_volume,
+                ((0, lr_pad_d), (0, pad_h), (0, pad_w)),
+                mode='reflect'
+            )
+
+            d_hr, h, w = hr_volume.shape
+
         # Random starting position for HR patch
         d_start = np.random.randint(0, max(1, d_hr - patch_d + 1))
         h_start = np.random.randint(0, max(1, h - patch_h + 1))
